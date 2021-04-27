@@ -18,41 +18,105 @@ time_table_drop = "drop table IF EXISTS time;"
 # CREATE TABLES
 
 staging_events_table_create= ("""
-create table IF NOT EXISTS staging_events(
-artist varchar,auth varchar,firstname varchar,
-gender char,itemInSession int,lastname varchar,
-length float,level varchar,location varchar,method varchar,page varchar,registration float,
-sessionid int,song varchar,status int,ts bigint,useragent varchar,userid int);
+CREATE TABLE IF NOT EXISTS staging_events
+  (
+     artist        VARCHAR,
+     auth          VARCHAR,
+     firstname     VARCHAR,
+     gender        CHAR,
+     iteminsession INT,
+     lastname      VARCHAR,
+     length        FLOAT,
+     level         VARCHAR,
+     location      VARCHAR,
+     method        VARCHAR,
+     page          VARCHAR,
+     registration  VARCHAR,
+     sessionid     INT,
+     song          VARCHAR,
+     status        INT,
+     ts            BIGINT,
+     useragent     VARCHAR,
+     userid        INT
+  ); 
 
 """)
 
 staging_songs_table_create = ("""
-create table IF NOT EXISTS staging_songs(
-num_songs int,artist_id varchar,location varchar,latitude numeric,longitude numeric,name varchar,
-song_id varchar,title varchar,duration float,year int
-);
+CREATE TABLE IF NOT EXISTS staging_songs
+  (
+     num_songs INT,
+     artist_id VARCHAR,
+     location  VARCHAR,
+     latitude  NUMERIC,
+     longitude NUMERIC,
+     name      VARCHAR,
+     song_id   VARCHAR,
+     title     VARCHAR,
+     duration  FLOAT,
+     year      INT
+  ); 
 
 """)
 
 songplay_table_create = ("""
-create table IF NOT EXISTS songplays (songplay_id int IDENTITY(0,1),start_time timestamp NOT NULL,user_id int NOT NULL,level varchar,song_id varchar NOT NULL,artist_id varchar NOT NULL,session_id int,location varchar,user_agent varchar);
+CREATE TABLEIF NOT EXISTS songplays 
+    (
+        songplay_id INT IDENTITY(0,1),
+        start_time TIMESTAMP NOT NULL,
+        user_id INT NOT NULL,
+        level VARCHAR,
+        song_id VARCHAR NOT NULL,
+        artist_id VARCHAR NOT NULL,
+        session_id INT,
+        location VARCHAR,
+        user_agent VARCHAR
+    );
 """)
 
 user_table_create = ("""
-create table IF NOT EXISTS users (user_id int,first_name varchar,last_name varchar,gender char(1),level varchar);
+CREATE TABLE IF NOT EXISTS users
+  (
+     user_id    INT,
+     first_name VARCHAR,
+     last_name  VARCHAR,
+     gender     CHAR(1),
+     level      VARCHAR
+  ); 
 """)
 
 song_table_create = ("""
-create table IF NOT EXISTS songs (song_id varchar PRIMARY KEY ,title varchar,artist_id varchar,year integer,duration numeric);
+CREATE TABLE IF NOT EXISTS songs
+  (
+     song_id   VARCHAR PRIMARY KEY,
+     title     VARCHAR,
+     artist_id VARCHAR,
+     year      INTEGER,
+     duration  NUMERIC
+  ); 
 """)
 
 artist_table_create = ("""
-create table IF NOT EXISTS artists (artist_id varchar Primary Key,name varchar,location varchar,latitude numeric,longitude numeric);
-""")
+CREATE TABLE IF NOT EXISTS artists
+  (
+     artist_id VARCHAR PRIMARY KEY,
+     name      VARCHAR,
+     location  VARCHAR,
+     latitude  NUMERIC,
+     longitude NUMERIC
+  ); """)
 
 time_table_create = ("""
-create table IF NOT EXISTS time(start_time timestamp primary key,hour int,day int,week int,month int,year int,weekday int);
-""")
+CREATE TABLE IF NOT EXISTS time
+  (
+     start_time TIMESTAMP PRIMARY KEY,
+     hour       INT,
+     day        INT,
+     week       INT,
+     month      INT,
+     year       INT,
+     weekday    INT
+  );""")
 
 # STAGING TABLES
 
@@ -73,50 +137,104 @@ credentials 'aws_iam_role={}' compupdate off
 # FINAL TABLES
 
 songplay_table_insert = ("""
-INSERT INTO songplays ( start_time, user_id, level, song_id, artist_id, session_id, location, user_agent )
-SELECT distinct
-TIMESTAMP 'epoch' + events.ts/1000 * INTERVAL '1 second' as start_time,
-events.userid as user_id,
-events.level as level,
-songs.song_id as song_id,
-songs.artist_id AS artist_id,
-events.sessionid AS session_id,
-events.location AS location,
-events.useragent AS user_agent
-FROM staging_events AS events
-JOIN staging_songs AS songs
-ON (events.artist = songs.name)
-AND (events.song = songs.title)
-AND (events.length = songs.duration)
-WHERE events.page = 'NextSong' and events.userid is not null
+INSERT INTO songplays
+            (
+                        start_time,
+                        user_id,
+                        level,
+                        song_id,
+                        artist_id,
+                        session_id,
+                        location,
+                        user_agent
+            )
+SELECT DISTINCT timestamp 'epoch' + events.ts/1000 * interval '1 second' AS start_time,
+                events.userid                                            AS user_id,
+                events.level                                             AS level,
+                songs.song_id                                            AS song_id,
+                songs.artist_id                                          AS artist_id,
+                events.sessionid                                         AS session_id,
+                events.location                                          AS location,
+                events.useragent                                         AS user_agent
+FROM            staging_events                                           AS events
+JOIN            staging_songs                                            AS songs
+ON              (
+                                events.artist = songs.NAME)
+AND             (
+                                events.song = songs.title)
+AND             (
+                                events.length = songs.duration)
+WHERE           events.page = 'NextSong'
+AND             events.userid IS NOT NULL
 """)
 
 user_table_insert = ("""
-INSERT INTO users (user_id, first_name, last_name, gender, level )
-select distinct  userid, firstname, lastname, gender, level from staging_events WHERE page = 'NextSong' and userid is not null;
+INSERT INTO users
+            (user_id,
+             first_name,
+             last_name,
+             gender,
+             level)
+SELECT DISTINCT userid,
+                firstname,
+                lastname,
+                gender,
+                level
+FROM   staging_events
+WHERE  page = 'NextSong'
+       AND userid IS NOT NULL
+       AND user_id NOT IN (SELECT DISTINCT user_id FROM users); 
 """)
 
 song_table_insert = ("""
-INSERT INTO songs (song_id, title, artist_id, year, duration )
-select distinct song_id, title, artist_id, year, duration  from staging_songs;
+INSERT INTO songs
+            (song_id,
+             title,
+             artist_id,
+             year,
+             duration)
+SELECT DISTINCT song_id,
+                title,
+                artist_id,
+                year,
+                duration
+FROM   staging_songs; 
 """)
 
 artist_table_insert = ("""
-INSERT INTO artists ( artist_id, name, location, latitude, longitude )
-select distinct  artist_id,name,location,latitude,longitude from  staging_songs;
+INSERT INTO artists
+            (artist_id,
+             NAME,
+             location,
+             latitude,
+             longitude)
+SELECT DISTINCT artist_id,
+                NAME,
+                location,
+                latitude,
+                longitude
+FROM   staging_songs; 
 """)
 
 
 
 time_table_insert = ("""
-INSERT INTO time(start_time,hour,day,week,month,year,weekday)
-select distinct s.start_time,
-extract(hour from s.start_time) ,
-extract(day from s.start_time),
-extract(week from s.start_time),
-extract(month from s.start_time),
-extract(year from s.start_time),
-extract(weekday from s.start_time) from songplays s;
+INSERT INTO time
+            (start_time,
+             hour,
+             day,
+             week,
+             month,
+             year,
+             weekday)
+SELECT DISTINCT s.start_time,
+                Extract(hour FROM s.start_time),
+                Extract(day FROM s.start_time),
+                Extract(week FROM s.start_time),
+                Extract(month FROM s.start_time),
+                Extract(year FROM s.start_time),
+                Extract(weekday FROM s.start_time)
+FROM   songplays s; 
 """)
 
 # QUERY LISTS
